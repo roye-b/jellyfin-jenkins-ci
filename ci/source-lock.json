@@ -1,0 +1,13 @@
+
+{
+  "server": {
+    "repository": "https://github.com/jellyfin/jellyfin.git",
+    "tag": "v10.10.7",
+    "commit": "aefb9b2cffca3ccb7a95d89af0d9fb2040de6ed3"
+  },
+  "web": {
+    "repository": "https://github.com/jellyfin/jellyfin-web.git",
+    "tag": "v10.10.7",
+    "commit": "f4b8aa0ed4c5b571a3a6cc3bb027bb8ecebe5b68"
+  }
+}
