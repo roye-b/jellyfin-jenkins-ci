@@ -23,7 +23,10 @@ pipeline {
                         python3 -m json.tool ci/source-lock.json
                         '''
 
-                    def lock = readJSON file: 'ci/source-lock.json'
+                    
+                        def jsonText = readFile(file: 'ci/source-lock.json', encoding: 'UTF-8')
+                        def lock = new groovy.json.JsonSlurperClassic().parseText(jsonText)
+
 
 
                     def sources = [
