@@ -1,8 +1,6 @@
 
 pipeline {
-    agent {
-        label 'jellyfin-agent'
-    }
+    agent { label 'jellyfin-agent' }
 
     options {
         skipDefaultCheckout(true)
@@ -14,38 +12,25 @@ pipeline {
             steps {
                 checkout scm
 
-                
                 script {
-                    sh '''
-                        echo "=== Checking source-lock.json ==="
-                        pwd
-                        ls -l ci/source-lock.json
-                        python3 -m json.tool ci/source-lock.json
-                        '''
-
-                    
-                        def jsonText = readFile(file: 'ci/source-lock.json', encoding: 'UTF-8')
-                        def lock = new groovy.json.JsonSlurperClassic().parseText(jsonText)
-
-
+                    def jsonText = readFile(
+                        file: 'ci/source-lock.json',
+                        encoding: 'UTF-8'
+                    )
+                    def lock = new groovy.json.JsonSlurperClassic()
+                        .parseText(jsonText)
 
                     def sources = [
-                        [name: 'server', path: 'src/server',
-                         data: lock.server],
-                        [name: 'web', path: 'src/web',
-                         data: lock.web]
+                        [name: 'server', path: 'src/server', data: lock.server],
+                        [name: 'web', path: 'src/web', data: lock.web]
                     ]
 
                     for (source in sources) {
                         dir(source.path) {
                             checkout([
                                 $class: 'GitSCM',
-                                branches: [[
-                                    name: source.data.commit
-                                ]],
-                                userRemoteConfigs: [[
-                                    url: source.data.repository
-                                ]]
+                                branches: [[name: source.data.commit]],
+                                userRemoteConfigs: [[url: source.data.repository]]
                             ])
 
                             def actual = sh(
@@ -61,18 +46,37 @@ pipeline {
                         }
                     }
                 }
+            }
+        }
 
-                sh '''
-                    echo "=== Agent ==="
-                    hostname
-                    uname -m
-                    java -version
-                    git --version
+        stage('Parallel CI') {
+            parallel {
+                stage('Server CI') {
+                    steps {
+                        dir('src/server') {
+                            sh '''
+                                echo "=== Jellyfin Server ==="
+                                dotnet --version
+                                dotnet restore Jellyfin.sln
+                                dotnet build Jellyfin.sln --no-restore
+                            '''
+                        }
+                    }
+                }
 
-                    echo "=== Docker ==="
-                    docker version
-                    docker buildx version
-                '''
+                stage('Web CI') {
+                    steps {
+                        dir('src/web') {
+                            sh '''
+                                echo "=== Jellyfin Web ==="
+                                node --version
+                                npm --version
+                                npm ci
+                                npm run build
+                            '''
+                        }
+                    }
+                }
             }
         }
     }
