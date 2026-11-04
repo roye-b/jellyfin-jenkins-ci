@@ -14,8 +14,17 @@ pipeline {
             steps {
                 checkout scm
 
+                
                 script {
+                    sh '''
+                        echo "=== Checking source-lock.json ==="
+                        pwd
+                        ls -l ci/source-lock.json
+                        python3 -m json.tool ci/source-lock.json
+                        '''
+
                     def lock = readJSON file: 'ci/source-lock.json'
+
 
                     def sources = [
                         [name: 'server', path: 'src/server',
