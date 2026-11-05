@@ -81,6 +81,11 @@ pipeline {
                                 node --version
                                 npm --version
                                 npm ci --prefer-offline --no-audit --no-fund
+                                echo "=== Configure Webpack Cache ==="
+                                cp ../../ci/webpack.ci.js ./webpack.ci.js
+                                echo "=== Build Jellyfin Web with Cache ==="
+                                mkdir -p /home/jenkins/.cache/jellyfin-webpack
+                                npx webpack --config webpack.ci.js
                                 npm run build:production
                             '''
                         }
