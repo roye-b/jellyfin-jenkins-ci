@@ -60,6 +60,7 @@ pipeline {
                                 dotnet --version
                                 dotnet restore Jellyfin.sln
                                 dotnet build Jellyfin.sln --no-restore
+                                dotnet test Jellyfin.sln --no-restore --no-build
                             '''
                         }
                     }
