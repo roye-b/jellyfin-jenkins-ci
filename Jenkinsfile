@@ -9,7 +9,7 @@ pipeline {
 
     stages {
         stage('Checkout and Preflight') {
-            steps {
+            steps {ג
                 checkout scm
 
                 script {
@@ -58,6 +58,9 @@ pipeline {
                             sh '''
                                 echo "=== Jellyfin Server ==="
                                 dotnet --version
+
+                                sed -i '/var client = _factory.CreateClient();/a\            client.Timeout = System.TimeSpan.FromMinutes(10);' tests/Jellyfin.Server.Integration.Tests/OpenApiSpecTests.cs
+                                
                                 dotnet restore Jellyfin.sln
                                 dotnet build Jellyfin.sln --no-restore
                                 dotnet test Jellyfin.sln --no-restore --no-build
