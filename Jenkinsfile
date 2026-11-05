@@ -9,7 +9,7 @@ pipeline {
 
     stages {
         stage('Checkout and Preflight') {
-            steps {ג
+            steps {
                 checkout scm
 
                 script {
