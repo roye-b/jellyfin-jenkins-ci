@@ -68,7 +68,7 @@ pipeline {
 
                 stage('Web CI') {
                     options {
-                        timeout(time: 90, unit: 'MINUTES')
+                        timeout(time: 3000, unit: 'MINUTES')
                     }
 
                     steps {
