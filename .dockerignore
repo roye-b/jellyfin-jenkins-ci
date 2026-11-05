@@ -1,0 +1,6 @@
+**
+!docker-context/
+!docker-context/server/
+!docker-context/server/**
+!docker-context/web/
+!docker-context/web/**
