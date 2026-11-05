@@ -71,7 +71,7 @@ pipeline {
                                 echo "=== Jellyfin Web ==="
                                 node --version
                                 npm --version
-                                npm ci
+                                npm ci --prefer-offline --no-audit --no-fund
                                 npm run build:production
                             '''
                         }
