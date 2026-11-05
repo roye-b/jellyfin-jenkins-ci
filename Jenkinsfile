@@ -17,6 +17,7 @@ pipeline {
                         file: 'ci/source-lock.json',
                         encoding: 'UTF-8'
                     )
+
                     def lock = new groovy.json.JsonSlurperClassic()
                         .parseText(jsonText)
 
@@ -65,6 +66,10 @@ pipeline {
                 }
 
                 stage('Web CI') {
+                    options {
+                        timeout(time: 90, unit: 'MINUTES')
+                    }
+
                     steps {
                         dir('src/web') {
                             sh '''
