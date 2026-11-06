@@ -87,7 +87,7 @@ pipeline {
                                 cp ../../ci/webpack.ci.js ./webpack.ci.js
 
                                 echo "=== Build Jellyfin Web ==="
-                                mkdir -p /home/jenkins/.cache/jellyfin-webpack
+                                mkdir -p "$WORKSPACE/.webpack-cache"
                                 NODE_ENV=production npx webpack --config webpack.ci.js
 
                                 test -d dist
