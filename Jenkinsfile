@@ -5,9 +5,16 @@ pipeline {
     options {
         skipDefaultCheckout(true)
         timestamps()
+        disableConcurrentBuilds()
+    }
+
+    environment {
+        DOCKER_BUILDKIT = '1'
+        IMAGE_NAME = 'jellyfin-ci'
     }
 
     stages {
+
         stage('Checkout and Preflight') {
             steps {
                 checkout scm
@@ -31,7 +38,9 @@ pipeline {
                             checkout([
                                 $class: 'GitSCM',
                                 branches: [[name: source.data.commit]],
-                                userRemoteConfigs: [[url: source.data.repository]]
+                                userRemoteConfigs: [[
+                                    url: source.data.repository
+                                ]]
                             ])
 
                             def actual = sh(
@@ -47,96 +56,98 @@ pipeline {
                         }
                     }
                 }
-            }
-        }
 
-        stage('Parallel CI') {
-            parallel {
-                stage('Server CI') {
-                    steps {
-                        dir('src/server') {
-                            sh '''
-                                echo "=== Jellyfin Server ==="
-                                dotnet --version
-
-                                sed -i '/var client = _factory.CreateClient();/a\\            client.Timeout = System.TimeSpan.FromMinutes(10);' tests/Jellyfin.Server.Integration.Tests/OpenApiSpecTests.cs
-
-                                dotnet restore Jellyfin.sln
-                                dotnet build Jellyfin.sln --no-restore
-                                dotnet test Jellyfin.sln --no-restore --no-build
-                            '''
-                        }
-                    }
-                }
-
-                stage('Web CI') {
-                    options {
-                        timeout(time: 3000, unit: 'MINUTES')
-                    }
-
-                    steps {
-                        dir('src/web') {
-                            sh '''
-                                echo "=== Jellyfin Web ==="
-                                node --version
-                                npm --version
-
-                                npm ci --prefer-offline --no-audit --no-fund
-
-                                echo "=== Configure Webpack Cache ==="
-                                cp ../../ci/webpack.ci.js ./webpack.ci.js
-
-                                echo "=== Build Jellyfin Web ==="
-                                mkdir -p "$WORKSPACE/.webpack-cache"
-                                NODE_ENV=production npx webpack --config webpack.ci.js
-
-                                test -d dist
-                            '''
-                        }
-                    }
-                }
-            }
-        }
-
-        stage('Prepare Docker Context') {
-            steps {
                 sh '''
-                    echo "=== Prepare Docker Context ==="
-
-                    rm -rf docker-context
-                    mkdir -p docker-context/server docker-context/web
-
-                    echo "=== Publish Jellyfin Server ==="
-                    dotnet publish src/server/Jellyfin.Server/Jellyfin.Server.csproj \
-                        -c Release \
-                        --no-restore \
-                        -o "$WORKSPACE/docker-context/server"
-
-                    echo "=== Copy Jellyfin Web ==="
-                    cp -a src/web/dist/. docker-context/web/
-
-                    echo "=== Verify Artifacts ==="
-                    test -f docker-context/server/jellyfin.dll
-                    test -f docker-context/web/index.html
+                    echo "=== Verify required files ==="
+                    test -f Dockerfile
+                    test -f .dockerignore
+                    test -f ci/webpack.ci.js
+                    test -f src/server/Jellyfin.sln
+                    test -f src/web/package-lock.json
+                    docker version
+                    docker buildx version
                 '''
             }
         }
 
-        stage('Docker Build') {
+        stage('Server CI') {
+            steps {
+                dir('src/server') {
+                    sh '''
+                        set -eu
+
+                        echo "=== Jellyfin Server ==="
+                        dotnet --version
+
+                        dotnet restore Jellyfin.sln
+                        dotnet build Jellyfin.sln --no-restore
+
+                        echo "=== Run Server Tests ==="
+                        dotnet test Jellyfin.sln \
+                            --no-restore \
+                            --no-build \
+                            --logger "trx;LogFilePrefix=jellyfin-tests" \
+                            --results-directory "$WORKSPACE/test-results"
+                    '''
+                }
+            }
+
+            post {
+                always {
+                    archiveArtifacts(
+                        artifacts: 'test-results/**/*.trx',
+                        allowEmptyArchive: true
+                    )
+                }
+            }
+        }
+
+        stage('Docker Multi-Stage Build') {
             steps {
                 sh '''
-                    echo "=== Build Docker Image ==="
+                    set -eu
+
+                    echo "=== Docker Build with BuildKit Cache ==="
 
                     docker build \
-                        -f docker/Dockerfile \
-                        -t jellyfin-ci:${BUILD_NUMBER} \
-                        -t jellyfin-ci:latest \
+                        --progress=plain \
+                        -f Dockerfile \
+                        -t "${IMAGE_NAME}:${BUILD_NUMBER}" \
+                        -t "${IMAGE_NAME}:latest" \
                         .
 
-                    echo "=== Docker Image ==="
-                    docker image ls jellyfin-ci
+                    echo "=== Verify Docker Image ==="
+                    docker image inspect "${IMAGE_NAME}:${BUILD_NUMBER}"
+                    docker image ls "${IMAGE_NAME}"
                 '''
             }
+        }
+
+        stage('Verify Docker Image') {
+            steps {
+                sh '''
+                    set -eu
+
+                    echo "=== Verify Jellyfin files inside image ==="
+
+                    docker run --rm \
+                        --entrypoint /bin/sh \
+                        "${IMAGE_NAME}:${BUILD_NUMBER}" \
+                        -c 'test -f /jellyfin/jellyfin.dll && test -f /jellyfin/jellyfin-web/index.html'
+
+                    echo "=== Docker Image Verified ==="
+                '''
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Jellyfin CI and Docker Build completed successfully.'
+        }
+
+        failure {
+            echo 'Pipeline failed. Check the failing stage and test reports.'
         }
     }
 }
