@@ -2,7 +2,7 @@ const config = require('./webpack.prod.js');
 
 config.cache = {
     type: 'filesystem',
-    cacheDirectory: '/home/jenkins/.cache/jellyfin-webpack',
+    cacheDirectory: process.env.WORKSPACE + '/.webpack-cache',
     buildDependencies: {
         config: [
             __filename,
