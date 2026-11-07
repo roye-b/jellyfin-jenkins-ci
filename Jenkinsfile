@@ -58,12 +58,16 @@ pipeline {
                 }
 
                 sh '''
+                    set -eu
+
                     echo "=== Verify required files ==="
                     test -f Dockerfile
                     test -f .dockerignore
                     test -f ci/webpack.ci.js
                     test -f src/server/Jellyfin.sln
                     test -f src/web/package-lock.json
+
+                    echo "=== Docker and Buildx ==="
                     docker version
                     docker buildx version
                 '''
@@ -79,15 +83,34 @@ pipeline {
                         echo "=== Jellyfin Server ==="
                         dotnet --version
 
+                        echo "=== Restore Dependencies ==="
                         dotnet restore Jellyfin.sln
+
+                        echo "=== Configure OpenAPI Test Timeout ==="
+
+                        TEST_FILE="tests/Jellyfin.Server.Integration.Tests/OpenApiSpecTests.cs"
+
+                        if ! grep -q 'client.Timeout = System.TimeSpan.FromMinutes(10);' "$TEST_FILE"; then
+                            sed -i '/var client = _factory.CreateClient();/a\\            client.Timeout = System.TimeSpan.FromMinutes(10);' "$TEST_FILE"
+                        fi
+
+                        echo "=== Verify Timeout ==="
+                        grep -n 'client.Timeout' "$TEST_FILE"
+
+                        echo "=== Build Jellyfin Server ==="
                         dotnet build Jellyfin.sln --no-restore
 
                         echo "=== Run Server Tests ==="
+
+                        mkdir -p ../../test-results
+
                         dotnet test Jellyfin.sln \
                             --no-restore \
                             --no-build \
-                            --logger "trx;LogFilePrefix=jellyfin-tests" \
-                            --results-directory "$WORKSPACE/test-results"
+                            --results-directory ../../test-results \
+                            --logger "trx;LogFilePrefix=jellyfin-tests"
+
+                        echo "=== Server Tests Completed ==="
                     '''
                 }
             }
