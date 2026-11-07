@@ -30,7 +30,7 @@ WORKDIR /src/web
 COPY src/web/package.json src/web/package-lock.json ./
 
 RUN --mount=type=cache,id=jellyfin-npm,target=/root/.npm,sharing=locked \
-    npm ci --prefer-offline --no-audit --no-fund
+    npm ci --include=dev --prefer-offline --no-audit --no-fund
 
 COPY src/web/ ./
 COPY ci/webpack.ci.js ./webpack.ci.js
@@ -39,7 +39,7 @@ ENV NODE_ENV=production
 ENV WEBPACK_CACHE_DIR=/src/web/.webpack-cache
 
 RUN --mount=type=cache,id=jellyfin-webpack,target=/src/web/.webpack-cache,sharing=locked \
-    npx webpack --config webpack.ci.js \
+    npx webpack --config webpack.ci.js --config webpack.ci.js \
     && test -f dist/index.html
 
 # ==========================================
