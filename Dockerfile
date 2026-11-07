@@ -39,7 +39,7 @@ ENV NODE_ENV=production
 ENV WEBPACK_CACHE_DIR=/src/web/.webpack-cache
 
 RUN --mount=type=cache,id=jellyfin-webpack,target=/src/web/.webpack-cache,sharing=locked \
-    npx webpack --config webpack.ci.js --config webpack.ci.js \
+    ./node_modules/.bin/webpack --config webpack.ci.js \
     && test -f dist/index.html
 
 # ==========================================
