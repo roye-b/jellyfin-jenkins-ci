@@ -104,7 +104,7 @@ pipeline {
 
                         mkdir -p ../../test-results
 
-                        dotnet test Jellyfin.sln \
+                        dotnet test tests/Jellyfin.Server.Integration.Tests/Jellyfin.Server.Integration.Tests.csproj \
                             --no-restore \
                             --no-build \
                             --results-directory ../../test-results \
