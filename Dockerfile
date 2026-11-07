@@ -10,7 +10,7 @@ WORKDIR /src/server
 COPY src/server/ ./
 
 RUN --mount=type=cache,id=jellyfin-nuget,target=/root/.nuget/packages,sharing=locked \
-    dotnet restore Jellyfin.sln
+    dotnet restore Jellyfin.sln --disable-parallel
 
 RUN --mount=type=cache,id=jellyfin-nuget,target=/root/.nuget/packages,sharing=locked \
     dotnet publish Jellyfin.Server/Jellyfin.Server.csproj \
