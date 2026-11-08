@@ -30,7 +30,17 @@ WORKDIR /src/web
 COPY src/web/package.json src/web/package-lock.json ./
 
 RUN --mount=type=cache,id=jellyfin-npm,target=/root/.npm,sharing=locked \
-    npm ci --include=dev --prefer-offline --no-audit --no-fund
+    npm ci \
+      --include=dev \
+      --maxsockets=3 \
+      --prefer-offline \
+      --fetch-retries=5 \
+      --fetch-retry-mintimeout=20000 \
+      --fetch-retry-maxtimeout=120000 \
+      --no-audit \
+      --no-fund \
+    && test -x node_modules/.bin/webpack \
+    && npm ls webpack webpack-cli --depth=0
 
 COPY src/web/ ./
 COPY ci/webpack.ci.js ./webpack.ci.js
