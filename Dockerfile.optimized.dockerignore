@@ -1,0 +1,31 @@
+
+# Ignore Git metadata
+.git
+.gitignore
+
+# Ignore Jenkins files
+Jenkinsfile
+README.md
+
+# Ignore previous Docker build artifacts
+
+# Ignore Node.js dependencies and caches
+**/node_modules/
+**/.npm/
+**/.webpack-cache/
+**/.cache/
+**/dist/
+
+# Ignore .NET build artifacts
+**/bin/
+**/obj/
+**/TestResults/
+
+# Ignore temporary files and logs
+**/*.log
+**/*.tmp
+**/.DS_Store
+
+# Ignore editor settings
+**/.vscode/
+**/.idea/
