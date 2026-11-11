@@ -21,8 +21,7 @@ pipeline {
                 checkout scm
 
                 script {
-                    def lock = new groovy.json.JsonSlurperClassic()
-                        .parseText(readFile('ci/source-lock.json'))
+                    def lock = readJSON file: 'ci/source-lock.json', returnPojo: true
 
                     def sources = [
                         [name: 'server', path: 'src/server', data: lock.server],
