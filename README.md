@@ -78,3 +78,12 @@ The job loads its `Jenkinsfile` from this repository's `main` branch.
 ## Notes
 
 This project is a work in progress. The final goal is to produce a tested, verified Jellyfin Linux container image with reproducible build inputs and archived CI evidence.
+
+
+## CI Pipeline Test
+
+This change is used to verify that Jenkins detects
+new commits pushed to the main branch.
+
+Test: GitHub → Jenkins → Docker Build → Image Verification.
+
