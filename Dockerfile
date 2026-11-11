@@ -2,55 +2,35 @@
 # syntax=docker/dockerfile:1.7
 
 # ==========================================
-# Stage 1 - Build Jellyfin Server
+# Stage 1 - .NET Build Environment
 # ==========================================
 FROM mcr.microsoft.com/dotnet/sdk:8.0-bookworm-slim AS server-build
 
 WORKDIR /src/server
-COPY src/server/ ./
 
-RUN --mount=type=cache,id=jellyfin-nuget,target=/root/.nuget/packages,sharing=locked \
-    dotnet restore Jellyfin.sln --disable-parallel
+ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 \
+    DOTNET_NOLOGO=1 \
+    NUGET_PACKAGES=/root/.nuget/packages
 
-RUN --mount=type=cache,id=jellyfin-nuget,target=/root/.nuget/packages,sharing=locked \
-    dotnet publish Jellyfin.Server/Jellyfin.Server.csproj \
-    -c Release \
-    --no-restore \
-    -o /out/server
+# Jenkins will mount the server source and run:
+# dotnet restore, build, test and publish.
+# Published files go to docker-context/server.
 
-RUN test -f /out/server/jellyfin.dll
 
 # ==========================================
-# Stage 2 - Build Jellyfin Web
+# Stage 2 - Node.js Build Environment
 # ==========================================
 FROM node:20-bookworm AS web-build
 
 WORKDIR /src/web
 
-COPY src/web/package.json src/web/package-lock.json ./
+ENV WEBPACK_CACHE_DIR=/src/web/.webpack-cache \
+    NODE_ENV=production
 
-RUN --mount=type=cache,id=jellyfin-npm,target=/root/.npm,sharing=locked \
-    npm ci \
-      --include=dev \
-      --maxsockets=3 \
-      --prefer-offline \
-      --fetch-retries=5 \
-      --fetch-retry-mintimeout=20000 \
-      --fetch-retry-maxtimeout=120000 \
-      --no-audit \
-      --no-fund \
-    && test -x node_modules/.bin/webpack \
-    && npm ls webpack webpack-cli --depth=0
+# Jenkins will mount the web source and run:
+# npm ci, tests and webpack.
+# Web output goes to docker-context/web.
 
-COPY src/web/ ./
-COPY ci/webpack.ci.js ./webpack.ci.js
-
-ENV NODE_ENV=production
-ENV WEBPACK_CACHE_DIR=/src/web/.webpack-cache
-
-RUN --mount=type=cache,id=jellyfin-webpack,target=/src/web/.webpack-cache,sharing=locked \
-    ./node_modules/.bin/webpack --config webpack.ci.js \
-    && test -f dist/index.html
 
 # ==========================================
 # Stage 3 - Jellyfin Runtime
@@ -66,10 +46,13 @@ RUN apt-get update \
 
 WORKDIR /jellyfin
 
-COPY --from=server-build /out/server/ /jellyfin/
-COPY --from=web-build /src/web/dist/ /jellyfin/jellyfin-web/
+# Copy artifacts produced by Jenkins containers
+COPY docker-context/server/ /jellyfin/
+COPY docker-context/web/ /jellyfin/jellyfin-web/
 
-RUN mkdir -p /config /cache /media \
+RUN test -f /jellyfin/jellyfin.dll \
+    && test -f /jellyfin/jellyfin-web/index.html \
+    && mkdir -p /config /cache /media \
     && chown -R 10001:10001 \
        /jellyfin /config /cache /media
 
