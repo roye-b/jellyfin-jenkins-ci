@@ -83,107 +83,111 @@ pipeline {
             }
         }
 
-        stage('Server CI - Docker') {
-            steps {
-                sh '''
-                    set -eu
-
-                    echo "=== Server CI inside Docker ==="
-
-                    docker volume create jellyfin-nuget-cache >/dev/null
-
-                    docker run --rm \
-                        -v "$WORKSPACE:/workspace" \
-                        -v jellyfin-nuget-cache:/root/.nuget/packages \
-                        -w /workspace/src/server \
-                        jellyfin-server-sdk:ci \
-                        /bin/sh -ec '
-                            dotnet --version
-
-                            dotnet restore Jellyfin.sln --disable-parallel --source https://api.nuget.org/v3/index.json
-
-                            TEST_FILE="tests/Jellyfin.Server.Integration.Tests/OpenApiSpecTests.cs"
-
-                            if ! grep -q "client.Timeout = System.TimeSpan.FromMinutes(10);" "$TEST_FILE"; then
-                                sed -i "/var client = _factory.CreateClient();/a\\            client.Timeout = System.TimeSpan.FromMinutes(10);" "$TEST_FILE"
-                            fi
-
-                            dotnet build Jellyfin.sln \
-                                -c Release \
-                                --no-restore
-
-                            mkdir -p /workspace/test-results
-
-                            dotnet test \
-                                tests/Jellyfin.Server.Integration.Tests/Jellyfin.Server.Integration.Tests.csproj \
-                                -c Release \
-                                --no-restore \
-                                --no-build \
-                                --results-directory /workspace/test-results \
-                                --logger "trx;LogFilePrefix=jellyfin-tests"
-
-                            dotnet publish \
-                                Jellyfin.Server/Jellyfin.Server.csproj \
-                                -c Release \
-                                --no-restore \
-                                -o /workspace/docker-context/server
-
-                            test -f /workspace/docker-context/server/jellyfin.dll
-                        '
-
-                '''
-            }
-
-            post {
-                always {
-                    archiveArtifacts(
-                        artifacts: 'test-results/**/*.trx',
-                        allowEmptyArchive: true
-                    )
+        stage('Parallel CI') {
+            parallel {
+            stage('Server CI - Docker') {
+                steps {
+                    sh '''
+                        set -eu
+    
+                        echo "=== Server CI inside Docker ==="
+    
+                        docker volume create jellyfin-nuget-cache >/dev/null
+    
+                        docker run --rm \
+                            -v "$WORKSPACE:/workspace" \
+                            -v jellyfin-nuget-cache:/root/.nuget/packages \
+                            -w /workspace/src/server \
+                            jellyfin-server-sdk:ci \
+                            /bin/sh -ec '
+                                dotnet --version
+    
+                                dotnet restore Jellyfin.sln --disable-parallel --source https://api.nuget.org/v3/index.json
+    
+                                TEST_FILE="tests/Jellyfin.Server.Integration.Tests/OpenApiSpecTests.cs"
+    
+                                if ! grep -q "client.Timeout = System.TimeSpan.FromMinutes(10);" "$TEST_FILE"; then
+                                    sed -i "/var client = _factory.CreateClient();/a\\            client.Timeout = System.TimeSpan.FromMinutes(10);" "$TEST_FILE"
+                                fi
+    
+                                dotnet build Jellyfin.sln \
+                                    -c Release \
+                                    --no-restore
+    
+                                mkdir -p /workspace/test-results
+    
+                                dotnet test \
+                                    tests/Jellyfin.Server.Integration.Tests/Jellyfin.Server.Integration.Tests.csproj \
+                                    -c Release \
+                                    --no-restore \
+                                    --no-build \
+                                    --results-directory /workspace/test-results \
+                                    --logger "trx;LogFilePrefix=jellyfin-tests"
+    
+                                dotnet publish \
+                                    Jellyfin.Server/Jellyfin.Server.csproj \
+                                    -c Release \
+                                    --no-restore \
+                                    -o /workspace/docker-context/server
+    
+                                test -f /workspace/docker-context/server/jellyfin.dll
+                            '
+    
+                    '''
+                }
+    
+                post {
+                    always {
+                        archiveArtifacts(
+                            artifacts: 'test-results/**/*.trx',
+                            allowEmptyArchive: true
+                        )
+                    }
                 }
             }
-        }
-
-        stage('Web CI - Docker') {
-            steps {
-                sh '''
-                    set -eu
-
-                    echo "=== Web CI inside Docker ==="
-
-                    docker volume create jellyfin-npm-cache >/dev/null
-                    docker volume create jellyfin-webpack-cache >/dev/null
-
-                    cp ci/webpack.ci.js src/web/webpack.ci.js
-
-                    docker run --rm \
-                        -v "$WORKSPACE:/workspace" \
-                        -v jellyfin-npm-cache:/root/.npm \
-                        -v jellyfin-webpack-cache:/src/web/.webpack-cache \
-                        -w /workspace/src/web \
-                        -e WEBPACK_CACHE_DIR=/src/web/.webpack-cache \
-                        jellyfin-web-sdk:ci \
-                        /bin/sh -ec '
-                            node --version
-                            npm --version
-
-                            npm ci --include=dev \
-                                --prefer-offline \
-                                --no-audit \
-                                --no-fund
-
-                            npm run build:check
-
-                            npm test -- --run
-
-                            ./node_modules/.bin/webpack \
-                                --config webpack.ci.js
-
-                            test -f dist/index.html
-
-                            cp -a dist/. /workspace/docker-context/web/
-                        '
-                '''
+    
+            stage('Web CI - Docker') {
+                steps {
+                    sh '''
+                        set -eu
+    
+                        echo "=== Web CI inside Docker ==="
+    
+                        docker volume create jellyfin-npm-cache >/dev/null
+                        docker volume create jellyfin-webpack-cache >/dev/null
+    
+                        cp ci/webpack.ci.js src/web/webpack.ci.js
+    
+                        docker run --rm \
+                            -v "$WORKSPACE:/workspace" \
+                            -v jellyfin-npm-cache:/root/.npm \
+                            -v jellyfin-webpack-cache:/src/web/.webpack-cache \
+                            -w /workspace/src/web \
+                            -e WEBPACK_CACHE_DIR=/src/web/.webpack-cache \
+                            jellyfin-web-sdk:ci \
+                            /bin/sh -ec '
+                                node --version
+                                npm --version
+    
+                                npm ci --include=dev \
+                                    --prefer-offline \
+                                    --no-audit \
+                                    --no-fund
+    
+                                npm run build:check
+    
+                                npm test -- --run
+    
+                                ./node_modules/.bin/webpack \
+                                    --config webpack.ci.js
+    
+                                test -f dist/index.html
+    
+                                cp -a dist/. /workspace/docker-context/web/
+                            '
+                    '''
+                }
+            }
             }
         }
 
