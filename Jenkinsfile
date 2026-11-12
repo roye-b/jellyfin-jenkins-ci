@@ -126,7 +126,6 @@ pipeline {
                                 Jellyfin.Server/Jellyfin.Server.csproj \
                                 -c Release \
                                 --no-restore \
-                                --no-build \
                                 -o /workspace/docker-context/server
 
                             test -f /workspace/docker-context/server/jellyfin.dll
