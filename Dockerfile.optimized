@@ -3,7 +3,10 @@
 
 # Stage 1 - .NET Build Environment
 FROM mcr.microsoft.com/dotnet/sdk:8.0-bookworm-slim AS server-build
-
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+       libfontconfig1 \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /src/server
 
 ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 \
