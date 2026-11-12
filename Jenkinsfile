@@ -100,7 +100,7 @@ pipeline {
                         /bin/sh -ec '
                             dotnet --version
 
-                            dotnet restore Jellyfin.sln
+                            dotnet restore Jellyfin.sln --disable-parallel --source https://api.nuget.org/v3/index.json
 
                             TEST_FILE="tests/Jellyfin.Server.Integration.Tests/OpenApiSpecTests.cs"
 
