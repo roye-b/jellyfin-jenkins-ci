@@ -1,0 +1,11 @@
+# Temporary smoke test results
+smoke-results/
+
+# Local backup files
+Jenkinsfile.backup*
+Jenkinsfile.before-smoke
+README.backup.md
+
+# Editor temporary files
+*.swp
+*~

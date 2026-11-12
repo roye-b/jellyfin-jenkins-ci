@@ -225,7 +225,11 @@ pipeline {
                         "${IMAGE_NAME}:${BUILD_NUMBER}" \
                         -c 'test -f /jellyfin/jellyfin.dll && test -f /jellyfin/jellyfin-web/index.html'
 
-                    echo "=== Docker Image Verified ==="
+                    echo "=== Running Jellyfin Smoke Test ==="
+
+                    bash ci/smoke/smoke-test.sh "${IMAGE_NAME}:${BUILD_NUMBER}"
+
+                    echo "=== Docker Image and Smoke Test Verified ==="
                 '''
             }
         }
@@ -241,6 +245,10 @@ pipeline {
         }
 
         always {
+            archiveArtifacts(
+                artifacts: 'smoke-results/**/*',
+                allowEmptyArchive: true
+            )
             sh '''
                 if [ -d docker-context ]; then
                     docker run --rm \
@@ -254,5 +262,3 @@ pipeline {
         }
     }
 }
-
-

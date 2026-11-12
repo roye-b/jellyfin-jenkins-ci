@@ -63,18 +63,22 @@ The job loads its `Jenkinsfile` from this repository's `main` branch.
 
 ## Current Status
 
+## Current Status
+
 - [x] Jenkins agent configuration
 - [x] Source checkout and SHA verification
-- [x] Parallel Server and Web CI stages configured
-- [ ] Confirm successful Server and Web builds
-- [ ] Automated tests and coverage reports
+- [x] Server and Web builds completed successfully (Build #40)
+- [x] Parallel Server and Web CI configured
+- [x] Docker runtime image built successfully
+- [x] 104 Server integration tests passed in Build #40
+- [x] 144 Web tests passed in Build #40
+- [x] Smoke test script created
+- [ ] Smoke test execution in Jenkins
+- [ ] Full Server test coverage and reports
 - [ ] NuGet locked dependency restore
-- [ ] Containerized and pinned build toolchains
-- [ ] Multi-stage Docker image
-- [ ] Container smoke tests
-- [ ] Artifact archival and cleanup
+- [ ] Docker image digest pinning
 - [ ] Failure and concurrency evidence
-
+- [ ] Final artifact archival and submission
 ## Notes
 
 This project is a work in progress. The final goal is to produce a tested, verified Jellyfin Linux container image with reproducible build inputs and archived CI evidence.
