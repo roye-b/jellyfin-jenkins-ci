@@ -115,14 +115,30 @@ pipeline {
                                     --no-restore
     
                                 mkdir -p /workspace/test-results
-    
-                                dotnet test \
-                                    tests/Jellyfin.Server.Integration.Tests/Jellyfin.Server.Integration.Tests.csproj \
-                                    -c Release \
-                                    --no-restore \
-                                    --no-build \
-                                    --results-directory /workspace/test-results \
-                                    --logger "trx;LogFilePrefix=jellyfin-tests"
+
+                                echo "=== Run all 16 server test projects with TRX and coverage ==="
+                                count=0
+                                for project in tests/*/*.csproj; do
+                                    name=$(basename "$project" .csproj)
+                                    echo "=== Testing $name ==="
+                                    dotnet test "$project" \
+                                        -c Release \
+                                        --no-restore \
+                                        --no-build \
+                                        --results-directory "/workspace/test-results/$name" \
+                                        --logger "trx;LogFileName=$name.trx" \
+                                        --collect:"XPlat Code Coverage"
+                                    test -s "/workspace/test-results/$name/$name.trx" || {
+                                        echo "ERROR: Missing TRX report for $name"
+                                        exit 1
+                                    }
+                                    count=$((count + 1))
+                                done
+                                test "$count" -eq 16 || {
+                                    echo "ERROR: Expected 16 test projects; found $count"
+                                    exit 1
+                                }
+                                echo "All $count server test projects passed"
     
                                 dotnet publish \
                                     Jellyfin.Server/Jellyfin.Server.csproj \
@@ -139,7 +155,7 @@ pipeline {
                 post {
                     always {
                         archiveArtifacts(
-                            artifacts: 'test-results/**/*.trx',
+                            artifacts: 'test-results/**/*',
                             allowEmptyArchive: true
                         )
                     }
