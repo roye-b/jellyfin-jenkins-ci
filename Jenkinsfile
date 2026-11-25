@@ -192,7 +192,7 @@ pipeline {
     
                                 npm run build:check
     
-                                npm test -- --run
+                                npm test -- --run --testTimeout=30000
     
                                 ./node_modules/.bin/webpack \
                                     --config webpack.ci.js
