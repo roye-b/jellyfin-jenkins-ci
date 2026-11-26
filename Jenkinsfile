@@ -23,6 +23,16 @@ pipeline {
                 script {
 		    def lock = readJSON text: readFile('ci/source-lock.json').trim(), returnPojo: true
 
+					def utils = load 'ci/pipelineUtils.groovy'
+
+					utils.requireRepository(lock.server.repository)
+					utils.requireRepository(lock.web.repository)
+
+					utils.requireRevision(lock.server.commit)
+					utils.requireRevision(lock.web.commit)
+
+					echo 'Groovy Helpers: source lock validation passed'
+
                     def sources = [
                         [name: 'server', path: 'src/server', data: lock.server],
                         [name: 'web', path: 'src/web', data: lock.web]
