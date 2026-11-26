@@ -24,7 +24,7 @@ String resourceName(String prefix, String jobIdentity, String buildNumber) {
     }
     byte[] bytes = MessageDigest.getInstance('SHA-256').digest(
         jobIdentity.getBytes('UTF-8'))
-    String hash = bytes.take(6).collect { String.format('%02x', it & 0xff) }.join('')
+    String hash = bytes[0..5].collect { String.format('%02x', it & 0xff) }.join('')
     String clean = jobIdentity.toLowerCase(Locale.ROOT)
         .replaceAll(/[^a-z0-9]+/, '-').replaceAll(/^-+|-+$/, '')
     if (!clean) clean = 'job'
