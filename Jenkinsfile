@@ -76,6 +76,7 @@ pipeline {
 
                     mkdir -p docker-context/server
                     mkdir -p docker-context/web
+                    rm -rf test-results
                     mkdir -p test-results
 
                     echo "=== Build SDK Images ==="
@@ -164,10 +165,35 @@ pipeline {
     
                 post {
                     always {
-                        archiveArtifacts(
-                            artifacts: 'test-results/**/*',
-                            allowEmptyArchive: true
-                        )
+                        script {
+                            try {
+                                if (sh(
+                                    script: 'find test-results -mindepth 2 -maxdepth 2 -name "*.trx" -print -quit | grep -q .',
+                                    returnStatus: true
+                                ) == 0) {
+                                    sh 'python3 ci/trx-to-junit.py test-results'
+
+                                    junit(
+                                        testResults: 'test-results/junit/*.xml',
+                                        allowEmptyResults: false
+                                    )
+
+                                    recordCoverage(
+                                        tools: [[
+                                            parser: 'COBERTURA',
+                                            pattern: 'test-results/*/*/coverage.cobertura.xml'
+                                        ]]
+                                    )
+                                } else {
+                                    echo 'No TRX reports found; skipping JUnit and Coverage publishing.'
+                                }
+                            } finally {
+                                archiveArtifacts(
+                                    artifacts: 'test-results/**/*',
+                                    allowEmptyArchive: true
+                                )
+                            }
+                        }
                     }
                 }
             }
