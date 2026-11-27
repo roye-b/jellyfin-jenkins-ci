@@ -179,6 +179,7 @@ pipeline {
                                     )
 
                                     recordCoverage(
+                                        ignoreParsingErrors: true,
                                         tools: [[
                                             parser: 'COBERTURA',
                                             pattern: 'test-results/*/*/coverage.cobertura.xml'
